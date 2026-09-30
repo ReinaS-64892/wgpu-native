@@ -754,25 +754,35 @@ pub unsafe extern "C" fn wgpuGetInstanceLimits(
     native::WGPUStatus_Success
 }
 
+const INSTANCE_FEATURES: &[native::WGPUInstanceFeatureName] = &[
+    // unimplemented ...
+    // native::WGPUInstanceFeatureName_TimedWaitAny,
+    #[cfg(feature = "spirv")]
+    native::WGPUInstanceFeatureName_ShaderSourceSPIRV,
+    // is this feature implemented ... ?
+    // native::WGPUInstanceFeatureName_MultipleDevicesPerAdapter,
+];
 #[no_mangle]
 pub unsafe extern "C" fn wgpuGetInstanceFeatures(
-    _features: Option<&mut native::WGPUSupportedInstanceFeatures>,
+    features: Option<&mut native::WGPUSupportedInstanceFeatures>,
 ) {
-    unimplemented!("wgpuGetInstanceFeatures is not implemented");
+    let features = features.expect("invalid return pointer \"features\"");
+    features.featureCount = INSTANCE_FEATURES.len();
+    features.features = INSTANCE_FEATURES.as_ptr();
 }
-
 #[no_mangle]
 pub unsafe extern "C" fn wgpuHasInstanceFeature(
-    _feature_name: native::WGPUInstanceFeatureName,
+    feature_name: native::WGPUInstanceFeatureName,
 ) -> native::WGPUBool {
-    unimplemented!("wgpuHasInstanceFeature is not implemented");
+    INSTANCE_FEATURES.contains(&feature_name) as native::WGPUBool
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn wgpuSupportedInstanceFeaturesFreeMembers(
     _supported_features: native::WGPUSupportedInstanceFeatures,
 ) {
-    unimplemented!("wgpuSupportedInstanceFeaturesFreeMembers is not implemented");
+    // INSTANCE_FEATURES is static immutable storage.
+    // no allocation, therefore no release operation.
 }
 
 #[no_mangle]
