@@ -2436,6 +2436,28 @@ pub unsafe extern "C" fn wgpuDeviceCreateComputePipeline(
         error_sink: error_sink.clone(),
     }))
 }
+#[no_mangle]
+pub unsafe extern "C" fn wgpuDeviceCreateComputePipelineAsync(
+    device: native::WGPUDevice,
+    descriptor: Option<&native::WGPUComputePipelineDescriptor>,
+    callback_info: native::WGPUCreateComputePipelineAsyncCallbackInfo,
+) -> native::WGPUFuture {
+    let callback = callback_info.callback.expect("invalid callback");
+    if callback_info.mode != WGPUCallbackMode_AllowSpontaneous {
+        unimplemented!("Only `WGPUCallbackMode_AllowSpontaneous` are accepted.");
+    }
+    let compute_pipeline = wgpuDeviceCreateComputePipeline(device, descriptor);
+
+    callback(
+        native::WGPUCreatePipelineAsyncStatus_Success,
+        compute_pipeline,
+        EMPTY_STRING,
+        callback_info.userdata1,
+        callback_info.userdata2,
+    );
+
+    NULL_FUTURE
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn wgpuDeviceCreatePipelineLayout(
@@ -2784,6 +2806,29 @@ pub unsafe extern "C" fn wgpuDeviceCreateRenderPipeline(
         id: render_pipeline_id,
         error_sink: error_sink.clone(),
     }))
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn wgpuDeviceCreateRenderPipelineAsync(
+    device: native::WGPUDevice,
+    descriptor: Option<&native::WGPURenderPipelineDescriptor>,
+    callback_info: native::WGPUCreateRenderPipelineAsyncCallbackInfo,
+) -> native::WGPUFuture {
+    let callback = callback_info.callback.expect("invalid callback");
+    if callback_info.mode != WGPUCallbackMode_AllowSpontaneous {
+        unimplemented!("Only `WGPUCallbackMode_AllowSpontaneous` are accepted.");
+    }
+    let render_pipeline = wgpuDeviceCreateRenderPipeline(device, descriptor);
+
+    callback(
+        native::WGPUCreatePipelineAsyncStatus_Success,
+        render_pipeline,
+        EMPTY_STRING,
+        callback_info.userdata1,
+        callback_info.userdata2,
+    );
+
+    NULL_FUTURE
 }
 
 #[no_mangle]
@@ -3349,7 +3394,7 @@ pub unsafe extern "C" fn wgpuDevicePopErrorScope(
     if callback_info.mode != WGPUCallbackMode_AllowSpontaneous {
         unimplemented!("Only `WGPUCallbackMode_AllowSpontaneous` are accepted.");
     }
-    
+
     match scope.error {
         Some(error) => {
             let typ = match error {
