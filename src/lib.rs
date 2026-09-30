@@ -33,7 +33,10 @@ use wgc::{
     id, resource, Label,
 };
 
-use crate::conv::map_primitive_state;
+use crate::{
+    conv::map_primitive_state,
+    native::{WGPUCallbackMode_AllowProcessEvents, WGPUCallbackMode_AllowSpontaneous},
+};
 
 pub mod conv;
 pub mod logging;
@@ -1289,6 +1292,13 @@ pub unsafe extern "C" fn wgpuBufferMapAsync(
             Arc::clone(&buffer.map_state),
         )
     };
+
+    if (callback_info.mode != WGPUCallbackMode_AllowSpontaneous)
+        && (callback_info.mode != WGPUCallbackMode_AllowProcessEvents)
+    {
+        unimplemented!("Only `WGPUCallbackMode_AllowSpontaneous` or `WGPUCallbackMode_AllowProcessEvents` are accepted.");
+    }
+
     let callback = callback_info.callback.expect("invalid callback");
     let userdata = new_userdata!(callback_info);
 
@@ -3336,6 +3346,10 @@ pub unsafe extern "C" fn wgpuDevicePopErrorScope(
     let mut error_sink = device.error_sink.lock();
     let scope = error_sink.scopes.pop().unwrap();
 
+    if callback_info.mode != WGPUCallbackMode_AllowSpontaneous {
+        unimplemented!("Only `WGPUCallbackMode_AllowSpontaneous` are accepted.");
+    }
+    
     match scope.error {
         Some(error) => {
             let typ = match error {
@@ -3477,6 +3491,10 @@ pub unsafe extern "C" fn wgpuInstanceRequestAdapter(
     let instance = instance.as_ref().expect("invalid instance");
     let context = &instance.context;
     let callback = callback_info.callback.expect("invalid callback");
+
+    if callback_info.mode != WGPUCallbackMode_AllowSpontaneous {
+        unimplemented!("Only `WGPUCallbackMode_AllowSpontaneous` are accepted.");
+    }
 
     let (desc, inputs) = match options {
         Some(options) => (
@@ -3715,6 +3733,12 @@ pub unsafe extern "C" fn wgpuQueueOnSubmittedWorkDone(
     };
     let callback = callback_info.callback.expect("invalid callback");
     let userdata = new_userdata!(callback_info);
+
+    if (callback_info.mode != WGPUCallbackMode_AllowSpontaneous)
+        && (callback_info.mode != WGPUCallbackMode_AllowProcessEvents)
+    {
+        unimplemented!("Only `WGPUCallbackMode_AllowSpontaneous` or `WGPUCallbackMode_AllowProcessEvents` are accepted.");
+    }
 
     let closure: wgc::device::queue::SubmittedWorkDoneClosure = Box::new(move || {
         let empty_message = native::WGPUStringView {
@@ -5917,6 +5941,12 @@ pub unsafe extern "C" fn wgpuBlasPrepareCompactAsync(
     let blas_id = blas.id;
     let context = &blas.context;
     let error_sink = &blas.error_sink;
+
+    if (callback_info.mode != WGPUCallbackMode_AllowSpontaneous)
+        && (callback_info.mode != WGPUCallbackMode_AllowProcessEvents)
+    {
+        unimplemented!("Only `WGPUCallbackMode_AllowSpontaneous` or `WGPUCallbackMode_AllowProcessEvents` are accepted.");
+    }
 
     let closure: Option<wgc::resource::BlasCompactCallback> =
         callback_info.callback.map(|callback| {
