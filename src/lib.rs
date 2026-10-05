@@ -828,7 +828,7 @@ pub unsafe extern "C" fn wgpuBufferWriteMappedRange(
         return native::WGPUStatus_Error;
     }
 
-    std::ptr::copy(data as *mut u8, mapped_ptr, size);
+    std::ptr::copy(data as *const u8, mapped_ptr, size);
 
     native::WGPUStatus_Success
 }
