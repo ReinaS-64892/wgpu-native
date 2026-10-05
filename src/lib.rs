@@ -34,7 +34,7 @@ use wgc::{
 };
 
 use crate::{
-    conv::map_primitive_state,
+    conv::{map_primitive_state, WGPU_WHOLE_MAP_SIZE},
     native::{WGPUCallbackMode_AllowProcessEvents, WGPUCallbackMode_AllowSpontaneous},
 };
 
@@ -796,35 +796,19 @@ pub unsafe extern "C" fn wgpuBufferReadMappedRange(
     data: *mut c_void,
     size: usize,
 ) -> native::WGPUStatus {
-    let (buffer_id, context) = {
-        let buffer = buffer.as_ref().expect("invalid buffer");
-        (buffer.id, &buffer.context)
-    };
-
-    let buf = match context.buffer_get_mapped_range(
-        buffer_id,
-        offset as wgt::BufferAddress,
-        match size {
-            conv::WGPU_WHOLE_MAP_SIZE => None,
-            _ => Some(size as u64),
-        },
-    ) {
-        Ok(map_part) => map_part,
-        Err(err) => handle_error_fatal(err, "wgpuBufferWriteMappedRange"),
-    };
-
-    let buf_slice = std::slice::from_raw_parts(buf.0.as_ptr(), buf.1 as usize);
-    let mut data_slice = std::slice::from_raw_parts_mut(data as *mut u8, size);
-
-    match data_slice.write(buf_slice) {
-        Ok(write_len) => {
-            if write_len == (buf.1 as usize) {
-                return native::WGPUStatus_Error;
-            }
-            native::WGPUStatus_Success
-        }
-        Err(_) => native::WGPUStatus_Success,
+    if size == WGPU_WHOLE_MAP_SIZE {
+        return native::WGPUStatus_Error;
     }
+
+    let mapped_ptr = wgpuBufferGetConstMappedRange(buffer, offset, size);
+
+    if mapped_ptr.is_null() {
+        return native::WGPUStatus_Error;
+    }
+
+    std::ptr::copy(mapped_ptr, data as *mut u8, size);
+
+    native::WGPUStatus_Success
 }
 
 #[no_mangle]
@@ -834,35 +818,19 @@ pub unsafe extern "C" fn wgpuBufferWriteMappedRange(
     data: *const c_void,
     size: usize,
 ) -> native::WGPUStatus {
-    let (buffer_id, context) = {
-        let buffer = buffer.as_ref().expect("invalid buffer");
-        (buffer.id, &buffer.context)
-    };
-
-    let buf = match context.buffer_get_mapped_range(
-        buffer_id,
-        offset as wgt::BufferAddress,
-        match size {
-            conv::WGPU_WHOLE_MAP_SIZE => None,
-            _ => Some(size as u64),
-        },
-    ) {
-        Ok(map_part) => map_part,
-        Err(err) => handle_error_fatal(err, "wgpuBufferWriteMappedRange"),
-    };
-
-    let mut buf_slice = std::slice::from_raw_parts_mut(buf.0.as_ptr(), buf.1 as usize);
-    let data_slice = std::slice::from_raw_parts(data as *const u8, size);
-
-    match buf_slice.write(data_slice) {
-        Ok(write_len) => {
-            if write_len == (buf.1 as usize) {
-                return native::WGPUStatus_Error;
-            }
-            native::WGPUStatus_Success
-        }
-        Err(_) => native::WGPUStatus_Success,
+    if size == WGPU_WHOLE_MAP_SIZE {
+        return native::WGPUStatus_Error;
     }
+
+    let mapped_ptr = wgpuBufferGetMappedRange(buffer, offset, size);
+
+    if mapped_ptr.is_null() {
+        return native::WGPUStatus_Error;
+    }
+
+    std::ptr::copy(data as *mut u8, mapped_ptr, size);
+
+    native::WGPUStatus_Success
 }
 
 // Adapter methods
